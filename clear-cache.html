@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清除缓存 - 体感单词游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .instructions h2 {
+            margin-top: 0;
+        }
+        .instructions ol {
+            line-height: 2;
+        }
+        .instructions code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        button {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(238, 90, 36, 0.4);
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(238, 90, 36, 0.6);
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 清除浏览器缓存</h1>
+    
+    <div class="instructions">
+        <h2>请按照以下步骤操作：</h2>
+        <ol>
+            <li><strong>Mac用户</strong>：按 <code>Cmd + Shift + R</code></li>
+            <li><strong>Windows/Linux用户</strong>：按 <code>Ctrl + Shift + R</code></li>
+            <li>或者点击下方按钮自动清除缓存</li>
+        </ol>
+        
+        <h2>开发者工具方法：</h2>
+        <ol>
+            <li>按 <code>F12</code> 打开开发者工具</li>
+            <li>进入 <strong>Network（网络）</strong> 标签</li>
+            <li>勾选 <strong>Disable cache（禁用缓存）</strong></li>
+            <li>保持开发者工具打开，刷新页面</li>
+        </ol>
+    </div>
+
+    <button onclick="clearCacheAndReload()">🚀 清除缓存并重新加载游戏</button>
+    
+    <div id="successMsg" class="success">
+        ✅ 缓存已清除！正在重新加载游戏...
+    </div>
+
+    <script>
+        function clearCacheAndReload() {
+            // 显示成功消息
+            document.getElementById('successMsg').style.display = 'block';
+            
+            // 清除所有缓存
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    for (let name of names) {
+                        caches.delete(name);
+                    }
+                });
+            }
+            
+            // 清除localStorage
+            localStorage.clear();
+            
+            // 清除sessionStorage
+            sessionStorage.clear();
+            
+            // 延迟后重定向到主页面，添加时间戳防止缓存
+            setTimeout(function() {
+                window.location.href = 'index.html?t=' + new Date().getTime();
+            }, 1500);
+        }
+        
+        // 页面加载时显示提示
+        console.log('%c🔄 缓存清除页面已加载', 'color: #4CAF50; font-size: 20px; font-weight: bold;');
+        console.log('%c请使用硬刷新（Cmd+Shift+R 或 Ctrl+Shift+R）来清除缓存', 'color: #ff6b6b; font-size: 14px;');
+    </script>
+</body>
+</html>

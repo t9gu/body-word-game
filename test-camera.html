@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摄像头测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        video {
+            width: 100%;
+            max-width: 640px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            transform: scaleX(-1);
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #4CAF50;
+            color: white;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>📷 摄像头功能测试</h1>
+    
+    <div class="info">
+        <h3>测试说明：</h3>
+        <p>1. 点击"启动摄像头"按钮</p>
+        <p>2. 允许浏览器访问摄像头权限</p>
+        <p>3. 如果看到视频画面，说明摄像头工作正常</p>
+    </div>
+
+    <div id="errorMsg" class="error"></div>
+    <div id="successMsg" class="success"></div>
+
+    <video id="testVideo" autoplay muted playsinline></video>
+
+    <div style="margin-top: 20px;">
+        <button onclick="startCamera()">启动摄像头</button>
+        <button onclick="stopCamera()" style="background: #f44336;">停止摄像头</button>
+    </div>
+
+    <div class="info" style="margin-top: 20px;">
+        <h3>系统信息：</h3>
+        <p id="browserInfo"></p>
+        <p id="deviceInfo"></p>
+    </div>
+
+    <script>
+        let stream = null;
+        const video = document.getElementById('testVideo');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+
+        // 显示浏览器信息
+        document.getElementById('browserInfo').textContent = 
+            `浏览器: ${navigator.userAgent}`;
+        
+        // 检查MediaDevices API支持
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            document.getElementById('deviceInfo').textContent = 
+                '✅ 浏览器支持摄像头API';
+        } else {
+            document.getElementById('deviceInfo').textContent = 
+                '❌ 浏览器不支持摄像头API';
+            document.getElementById('deviceInfo').style.color = 'red';
+        }
+
+        async function startCamera() {
+            try {
+                errorMsg.style.display = 'none';
+                successMsg.style.display = 'none';
+
+                console.log('正在请求摄像头权限...');
+                
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: 640,
+                        height: 480,
+                        facingMode: 'user'
+                    }
+                });
+
+                console.log('摄像头权限已获取');
+                
+                video.srcObject = stream;
+                
+                await video.play();
+                
+                successMsg.textContent = '✅ 摄像头启动成功！';
+                successMsg.style.display = 'block';
+                
+                console.log('摄像头视频流已启动');
+
+            } catch (error) {
+                console.error('摄像头启动失败:', error);
+                
+                let message = '❌ 摄像头启动失败: ';
+                
+                if (error.name === 'NotAllowedError') {
+                    message += '用户拒绝了摄像头权限。请在浏览器设置中允许访问摄像头。';
+                } else if (error.name === 'NotFoundError') {
+                    message += '未找到摄像头设备。请确保电脑连接了摄像头。';
+                } else if (error.name === 'NotReadableError') {
+                    message += '摄像头被其他应用占用。请关闭其他使用摄像头的应用。';
+                } else if (error.name === 'OverconstrainedError') {
+                    message += '摄像头不支持请求的配置。';
+                } else if (error.name === 'SecurityError') {
+                    message += '安全错误。请确保使用HTTPS或localhost访问。';
+                } else {
+                    message += error.message;
+                }
+                
+                errorMsg.textContent = message;
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => {
+                    track.stop();
+                    console.log('摄像头已停止');
+                });
+                video.srcObject = null;
+                stream = null;
+                
+                successMsg.textContent = '摄像头已停止';
+                successMsg.style.display = 'block';
+            }
+        }
+
+        // 页面卸载时停止摄像头
+        window.addEventListener('beforeunload', stopCamera);
+    </script>
+</body>
+</html>

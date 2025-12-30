@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>诊断工具 - 体感单词游戏</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 {
+            color: #4ec9b0;
+            border-bottom: 2px solid #4ec9b0;
+            padding-bottom: 10px;
+        }
+        .section {
+            background: #252526;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007acc;
+        }
+        .success {
+            color: #4ec9b0;
+            font-weight: bold;
+        }
+        .error {
+            color: #f48771;
+            font-weight: bold;
+        }
+        .warning {
+            color: #dcdcaa;
+            font-weight: bold;
+        }
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1177bb;
+        }
+        #log {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 5px;
+        }
+        .log-error {
+            background: rgba(244, 135, 113, 0.2);
+            border-left: 3px solid #f48771;
+        }
+        .log-success {
+            background: rgba(78, 201, 176, 0.2);
+            border-left: 3px solid #4ec9b0;
+        }
+        .log-info {
+            background: rgba(78, 201, 176, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 游戏诊断工具</h1>
+    
+    <div class="section">
+        <h2>系统信息</h2>
+        <div id="systemInfo"></div>
+    </div>
+
+    <div class="section">
+        <h2>文件加载状态</h2>
+        <div id="fileStatus"></div>
+    </div>
+
+    <div class="section">
+        <h2>错误监控</h2>
+        <div>错误计数: <span id="errorCount" class="error">0</span></div>
+        <button onclick="clearErrors()">清除错误计数</button>
+        <button onclick="window.location.reload()">刷新页面</button>
+    </div>
+
+    <div class="section">
+        <h2>实时日志</h2>
+        <div id="log"></div>
+    </div>
+
+    <div class="section">
+        <h2>快速操作</h2>
+        <button onclick="testCamera()">测试摄像头</button>
+        <button onclick="testThreeJS()">测试Three.js</button>
+        <button onclick="testMediaPipe()">测试MediaPipe</button>
+        <button onclick="window.location.href='index.html?v=' + Date.now()">启动游戏</button>
+    </div>
+
+    <script>
+        let errorCount = 0;
+        const maxLogEntries = 100;
+        const logContainer = document.getElementById('log');
+
+        // 拦截console方法
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+
+        function addLogEntry(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.insertBefore(entry, logContainer.firstChild);
+            
+            // 限制日志条目数量
+            while (logContainer.children.length > maxLogEntries) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            addLogEntry(args.join(' '), 'success');
+        };
+
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            errorCount++;
+            document.getElementById('errorCount').textContent = errorCount;
+            addLogEntry('ERROR: ' + args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalConsoleWarn.apply(console, args);
+            addLogEntry('WARN: ' + args.join(' '), 'info');
+        };
+
+        // 捕获未处理的错误
+        window.addEventListener('error', (event) => {
+            errorCount++;
+            document.getElementById('errorCount').textContent = errorCount;
+            addLogEntry(`UNCAUGHT ERROR: ${event.message} at ${event.filename}:${event.lineno}`, 'error');
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            errorCount++;
+            document.getElementById('errorCount').textContent = errorCount;
+            addLogEntry(`UNHANDLED PROMISE: ${event.reason}`, 'error');
+        });
+
+        // 显示系统信息
+        function showSystemInfo() {
+            const info = document.getElementById('systemInfo');
+            info.innerHTML = `
+                <div><strong>浏览器:</strong> ${navigator.userAgent}</div>
+                <div><strong>平台:</strong> ${navigator.platform}</div>
+                <div><strong>语言:</strong> ${navigator.language}</div>
+                <div><strong>在线状态:</strong> ${navigator.onLine ? '✅ 在线' : '❌ 离线'}</div>
+                <div><strong>Cookie启用:</strong> ${navigator.cookieEnabled ? '✅ 是' : '❌ 否'}</div>
+                <div><strong>MediaDevices API:</strong> ${navigator.mediaDevices ? '✅ 支持' : '❌ 不支持'}</div>
+                <div><strong>WebGL:</strong> ${checkWebGL() ? '✅ 支持' : '❌ 不支持'}</div>
+            `;
+        }
+
+        function checkWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // 检查文件加载状态
+        async function checkFileStatus() {
+            const files = [
+                'js/threeSceneManager.js?v=3',
+                'js/poseDetector.js?v=3',
+                'js/gameLogic.js?v=3',
+                'js/main.js?v=3',
+                'data/wordData.js?v=3',
+                'favicon.svg'
+            ];
+
+            const statusDiv = document.getElementById('fileStatus');
+            statusDiv.innerHTML = '<div>正在检查文件...</div>';
+
+            let html = '';
+            for (const file of files) {
+                try {
+                    const response = await fetch(file, { method: 'HEAD' });
+                    const status = response.ok ? 
+                        `<span class="success">✅ ${response.status}</span>` : 
+                        `<span class="error">❌ ${response.status}</span>`;
+                    html += `<div>${file}: ${status}</div>`;
+                } catch (error) {
+                    html += `<div>${file}: <span class="error">❌ 加载失败</span></div>`;
+                }
+            }
+            statusDiv.innerHTML = html;
+        }
+
+        function clearErrors() {
+            errorCount = 0;
+            document.getElementById('errorCount').textContent = '0';
+            logContainer.innerHTML = '';
+            addLogEntry('错误计数已清除', 'success');
+        }
+
+        async function testCamera() {
+            addLogEntry('开始测试摄像头...', 'info');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop());
+                addLogEntry('摄像头测试成功 ✅', 'success');
+            } catch (error) {
+                addLogEntry(`摄像头测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        function testThreeJS() {
+            addLogEntry('测试Three.js...', 'info');
+            if (typeof THREE !== 'undefined') {
+                addLogEntry(`Three.js已加载 ✅ 版本: ${THREE.REVISION}`, 'success');
+            } else {
+                addLogEntry('Three.js未加载 ❌', 'error');
+            }
+        }
+
+        function testMediaPipe() {
+            addLogEntry('测试MediaPipe...', 'info');
+            if (typeof Pose !== 'undefined') {
+                addLogEntry('MediaPipe Pose已加载 ✅', 'success');
+            } else {
+                addLogEntry('MediaPipe Pose未加载 ❌', 'error');
+            }
+        }
+
+        // 页面加载时执行
+        window.addEventListener('load', () => {
+            showSystemInfo();
+            checkFileStatus();
+            addLogEntry('诊断工具已启动', 'success');
+        });
+    </script>
+
+    <!-- 加载依赖库用于测试 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+</body>
+</html>

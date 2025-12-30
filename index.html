@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>体感单词游戏 - Body Word Game</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+</head>
+<body>
+    <!-- 游戏容器 -->
+    <div id="gameContainer">
+        <!-- 开始界面 -->
+        <div id="startScreen" class="screen active">
+            <div class="content">
+                <h1>🎮 体感单词游戏</h1>
+                <p>用身体动作来学习英语单词！</p>
+                <button id="startBtn" class="btn primary">开始游戏</button>
+            </div>
+        </div>
+
+        <!-- 摄像头确认界面 -->
+        <div id="cameraScreen" class="screen">
+            <div class="content">
+                <h2>📷 准备摄像头</h2>
+                <p>🎯 游戏需要使用摄像头来检测你的身体动作</p>
+                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: -10px;">
+                    通过举手、挥手等动作来选择单词和图片
+                </p>
+                <div class="camera-preview">
+                    <video id="cameraVideo" autoplay muted playsinline></video>
+                </div>
+                <div style="margin: 15px 0; font-size: 0.9rem; opacity: 0.9;">
+                    <p>✅ 确保光线充足</p>
+                    <p>✅ 保持身体在摄像头视野内</p>
+                    <p>✅ 允许浏览器访问摄像头权限</p>
+                </div>
+                <div class="buttons">
+                    <button id="enableCameraBtn" class="btn primary">🚀 开启摄像头</button>
+                    <button id="skipCameraBtn" class="btn secondary">⚠️ 跳过（不推荐）</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主题选择界面 -->
+        <div id="topicScreen" class="screen">
+            <div class="content">
+                <h2>📚 选择单词主题</h2>
+                <div id="topicGrid" class="topic-grid">
+                    <!-- 主题按钮将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏界面 -->
+        <div id="gameScreen" class="screen">
+            <!-- 摄像头视频层（底层） -->
+            <video id="gameVideo" autoplay muted playsinline></video>
+            
+            <!-- 2D游戏画布（顶层，用于显示骨骼和圆形） -->
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- 游戏UI层 -->
+            <div id="gameUI">
+                <!-- 分数显示 -->
+                <div class="score-board">
+                    <div class="score">
+                        <span>得分: </span>
+                        <span id="scoreValue">0</span>
+                    </div>
+                    <div class="stats">
+                        <span>✓ <span id="correctCount">0</span></span>
+                        <span>✗ <span id="wrongCount">0</span></span>
+                    </div>
+                </div>
+
+                <!-- 游戏信息 -->
+                <div class="game-info">
+                    <div class="topic">
+                        <span>主题: </span>
+                        <span id="currentTopic">-</span>
+                    </div>
+                    <div class="timer">
+                        <span>时间: </span>
+                        <span id="timeValue">0</span>
+                    </div>
+                </div>
+
+                <!-- 反馈消息 -->
+                <div id="feedbackMessage" class="feedback-message"></div>
+
+                <!-- 控制按钮 -->
+                <div class="game-controls">
+                    <button id="pauseBtn" class="btn secondary">暂停</button>
+                    <button id="exitBtn" class="btn secondary">退出</button>
+                </div>
+            </div>
+
+            <!-- 姿态检测可视化（可选显示） -->
+            <canvas id="poseCanvas" style="display: none;"></canvas>
+        </div>
+
+        <!-- 结算界面 -->
+        <div id="resultScreen" class="screen">
+            <div class="content">
+                <h2>🎉 游戏结束！</h2>
+                <div class="result-stats">
+                    <div class="final-score">
+                        <span>最终得分: </span>
+                        <span id="finalScore">0</span>
+                    </div>
+                    <div class="accuracy">
+                        <span>正确率: </span>
+                        <span id="accuracy">0%</span>
+                    </div>
+                    <div class="detailed-stats">
+                        <div class="stat">
+                            <span>正确: </span>
+                            <span id="finalCorrect">0</span>
+                        </div>
+                        <div class="stat">
+                            <span>错误: </span>
+                            <span id="finalWrong">0</span>
+                        </div>
+                        <div class="stat">
+                            <span>用时: </span>
+                            <span id="finalTime">0s</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="result-buttons">
+                    <button id="playAgainBtn" class="btn primary">再玩一次</button>
+                    <button id="changeTopicBtn" class="btn secondary">更换主题</button>
+                    <button id="backToMenuBtn" class="btn secondary">返回主菜单</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div id="loadingIndicator" class="loading-indicator">
+        <div class="spinner"></div>
+        <p>加载中...</p>
+    </div>
+
+    <!-- JavaScript文件 - 添加版本号防止缓存 -->
+    <script src="data/wordData.js?v=13"></script>
+    <script src="js/audioManager.js?v=13"></script>
+    <script src="js/poseDetector.js?v=13"></script>
+    <script src="js/game2DRenderer.js?v=13"></script>
+    <script src="js/gameLogic.js?v=13"></script>
+    <script src="js/main.js?v=13"></script>
+</body>
+</html>
