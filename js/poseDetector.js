@@ -404,16 +404,32 @@ class PoseDetector {
     }
 
     // 清理资源
-    cleanup() {
-        this.stopDetection();
+    async cleanup() {
+        // 首先停止检测，防止新的帧被处理
+        this.isDetecting = false;
         
-        if (this.pose) {
-            this.pose.close();
-            this.pose = null;
+        // 停止摄像头
+        if (this.camera) {
+            try {
+                this.camera.stop();
+            } catch (e) {
+                // 忽略停止摄像头时的错误
+            }
+            this.camera = null;
         }
         
-        if (this.camera) {
-            this.camera = null;
+        // 等待一小段时间，让pending的pose.send()操作完成
+        // 这可以避免 "message channel closed before a response was received" 错误
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // 然后关闭pose实例
+        if (this.pose) {
+            try {
+                this.pose.close();
+            } catch (e) {
+                // 忽略关闭pose时的错误
+            }
+            this.pose = null;
         }
         
         this.isInitialized = false;

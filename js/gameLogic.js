@@ -603,7 +603,7 @@ class GameLogic {
     }
 
     // 清理资源
-    cleanup() {
+    async cleanup() {
         this.endGame();
         
         // 清理各个管理器
@@ -612,7 +612,7 @@ class GameLogic {
         }
         
         if (poseDetector) {
-            poseDetector.cleanup();
+            await poseDetector.cleanup();
         }
         
         if (threeSceneManager) {

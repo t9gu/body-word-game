@@ -158,9 +158,25 @@ class BodyWordGame {
             this.handleKeyPress(event);
         });
 
-        // 窗口事件
+        // 窗口事件 - 使用同步清理避免async问题
         window.addEventListener('beforeunload', () => {
-            this.cleanup();
+            // beforeunload无法等待async，直接停止检测防止message channel错误
+            if (poseDetector) {
+                poseDetector.isDetecting = false;
+                if (poseDetector.camera) {
+                    try { poseDetector.camera.stop(); } catch(e) {}
+                }
+            }
+        });
+        
+        // pagehide事件更可靠，用于移动端
+        window.addEventListener('pagehide', () => {
+            if (poseDetector) {
+                poseDetector.isDetecting = false;
+                if (poseDetector.camera) {
+                    try { poseDetector.camera.stop(); } catch(e) {}
+                }
+            }
         });
     }
 
@@ -502,10 +518,10 @@ class BodyWordGame {
     }
 
     // 清理资源
-    cleanup() {
+    async cleanup() {
         // 停止游戏
         if (gameLogic) {
-            gameLogic.cleanup();
+            await gameLogic.cleanup();
         }
 
         // 停止摄像头
